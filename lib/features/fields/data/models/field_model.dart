@@ -1,3 +1,5 @@
+import 'package:football/core/network/media_url.dart';
+
 class FieldOwner {
   final String id;
   final String email;
@@ -36,28 +38,27 @@ class FieldImage {
       return FieldImage(
         id: '',
         fieldId: '',
-        url: raw,
+        url: resolvePublicMediaUrl(raw),
         isPrimary: false,
         order: 0,
         createdAt: null,
       );
     }
 
-    if (raw is Map<String, dynamic>) {
+    if (raw is Map) {
+      final m = Map<String, dynamic>.from(raw);
       int asInt(dynamic v) => v is int ? v : int.tryParse(v.toString()) ?? 0;
 
+      final rawUrl = (m['url'] ?? m['path'] ?? '').toString();
       return FieldImage(
-        id: (raw['id'] ?? '').toString(),
-        fieldId: (raw['fieldId'] ?? '').toString(),
-        url: (raw['url'] ?? raw['path'] ?? '').toString().replaceFirst(
-          'http://localhost:3000',
-          'http://192.168.1.13:3000',
-        ),
-        isPrimary: raw['isPrimary'] == true,
-        order: asInt(raw['order']),
-        createdAt: raw['createdAt'] == null
+        id: (m['id'] ?? '').toString(),
+        fieldId: (m['fieldId'] ?? '').toString(),
+        url: resolvePublicMediaUrl(rawUrl),
+        isPrimary: m['isPrimary'] == true,
+        order: asInt(m['order']),
+        createdAt: m['createdAt'] == null
             ? null
-            : DateTime.tryParse(raw['createdAt'].toString()),
+            : DateTime.tryParse(m['createdAt'].toString()),
       );
     }
 

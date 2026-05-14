@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import 'package:football/features/bookings/data/payment_proof_upload.dart';
+
 import 'models/booking_model.dart';
 import 'models/bookings_list_result_model.dart';
 import 'models/cancel_booking_result_model.dart';
@@ -137,29 +139,28 @@ class BookingsApi {
       '$baseUrl/payments/${paymentId.trim()}/upload-screenshot',
     );
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers.addAll(_headers())
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'screenshot',
-          screenshotFile.path,
-        ),
-      );
+    final screenshotUrl = await PaymentProofUpload.uploadWithHttp(
+      client: _client,
+      bearerToken: token,
+      file: screenshotFile,
+      paymentId: paymentId.trim(),
+    );
 
-    if (notes != null && notes.trim().isNotEmpty) {
-      request.fields['notes'] = notes.trim();
-    }
+    final body = <String, dynamic>{
+      'screenshotUrl': screenshotUrl,
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      if (transactionId != null && transactionId.trim().isNotEmpty)
+        'transactionId': transactionId.trim(),
+      if (senderNumber != null && senderNumber.trim().isNotEmpty)
+        'senderNumber': senderNumber.trim(),
+    };
 
-    if (transactionId != null && transactionId.trim().isNotEmpty) {
-      request.fields['transactionId'] = transactionId.trim();
-    }
+    final res = await _client.post(
+      uri,
+      headers: _headers(json: true),
+      body: jsonEncode(body),
+    );
 
-    if (senderNumber != null && senderNumber.trim().isNotEmpty) {
-      request.fields['senderNumber'] = senderNumber.trim();
-    }
-
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
     final decoded = _decodeBody(res, method: 'POST', uri: uri);
     final data = _extractDataMap(decoded, method: 'POST', uri: uri);
 

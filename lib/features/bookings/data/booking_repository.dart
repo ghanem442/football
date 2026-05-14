@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:football/core/network/api_client.dart';
 import 'package:football/features/bookings/data/bookings_api.dart';
+import 'package:football/features/bookings/data/payment_proof_upload.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'models/booking_model.dart';
@@ -526,7 +527,7 @@ class BookingsRepository {
 
     if (kDebugMode) {
       debugPrint(
-        '[UPLOAD_SCREENSHOT] POST /payments/$resolvedPaymentId/upload-screenshot',
+        '[UPLOAD_SCREENSHOT] POST /payments/$resolvedPaymentId/upload-screenshot (JSON screenshotUrl)',
       );
       debugPrint('[UPLOAD_SCREENSHOT] file=${screenshotFile.path}');
       debugPrint('[UPLOAD_SCREENSHOT] notes=$notes');
@@ -535,23 +536,24 @@ class BookingsRepository {
     }
 
     try {
-      final formData = FormData.fromMap({
-        'screenshot': await MultipartFile.fromFile(
-          screenshotFile.path,
-          filename: screenshotFile.uri.pathSegments.isNotEmpty
-              ? screenshotFile.uri.pathSegments.last
-              : 'payment_screenshot',
-        ),
+      final screenshotUrl = await PaymentProofUpload.uploadWithApiClient(
+        api: api,
+        file: screenshotFile,
+        paymentId: resolvedPaymentId,
+      );
+
+      final body = <String, dynamic>{
+        'screenshotUrl': screenshotUrl,
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
         if (transactionId != null && transactionId.trim().isNotEmpty)
           'transactionId': transactionId.trim(),
         if (senderNumber != null && senderNumber.trim().isNotEmpty)
           'senderNumber': senderNumber.trim(),
-      });
+      };
 
-      final res = await api.dio.post(
+      final res = await api.post(
         'payments/$resolvedPaymentId/upload-screenshot',
-        data: formData,
+        data: body,
       );
 
       if (kDebugMode) {
